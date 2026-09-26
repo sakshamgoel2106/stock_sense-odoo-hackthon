@@ -73,14 +73,25 @@ const validateOperationController = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/inventory/stock
 // @access  Private
 const getStock = asyncHandler(async (req, res) => {
-  const { warehouse, product } = req.query;
+  const { warehouse, product, search } = req.query;
   const filter = {};
   if (warehouse) filter.warehouse = warehouse;
   if (product) filter.product = product;
 
+  if (search) {
+    const products = await require('../models/Product').find({
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { sku: { $regex: search, $options: 'i' } }
+      ]
+    }).select('_id');
+    const productIds = products.map(p => p._id);
+    filter.product = { $in: productIds };
+  }
+
   const stock = await Stock.find(filter)
-    .populate('product', 'name sku price')
-    .populate('warehouse', 'name location');
+    .populate('product', 'name sku price unitOfMeasure reorderLevel status')
+    .populate('warehouse', 'name location code');
   res.json(stock);
 });
 

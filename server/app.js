@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const { notFound, errorHandler } = require('./middleware/error.middleware');
 const inventoryRoutes = require('./routes/inventory.routes');
+const productRoutes = require('./routes/product.routes');
+const warehouseRoutes = require('./routes/warehouse.routes');
 
 const app = express();
 
@@ -14,6 +16,8 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api/v1/inventory', inventoryRoutes);
+app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/warehouses', warehouseRoutes);
 
 app.get('/', (req, res) => {
   res.send('StockSense API is running...');

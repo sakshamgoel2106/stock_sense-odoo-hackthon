@@ -17,10 +17,14 @@ Most routes require a Bearer token in the `Authorization` header.
 - `description`: String
 - `category`: String
 - `price`: Number
+- `unitOfMeasure`: String
+- `reorderLevel`: Number
+- `status`: String (Enum: 'ACTIVE', 'ARCHIVED')
 
 ### Warehouse
 - `_id`: ObjectId
 - `name`: String (required)
+- `code`: String (required, unique)
 - `location`: String
 - `isActive`: Boolean
 

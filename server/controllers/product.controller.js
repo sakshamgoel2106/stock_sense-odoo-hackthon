@@ -1,0 +1,126 @@
+const asyncHandler = require('express-async-handler');
+const Product = require('../models/Product');
+const Stock = require('../models/Stock');
+const StockLedger = require('../models/StockLedger');
+
+// @desc    Get all products
+// @route   GET /api/v1/products
+// @access  Private
+const getProducts = asyncHandler(async (req, res) => {
+  const { search, category, status } = req.query;
+  const filter = {};
+
+  if (search) {
+    filter.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { sku: { $regex: search, $options: 'i' } }
+    ];
+  }
+  if (category) filter.category = category;
+  if (status) filter.status = status;
+
+  const products = await Product.find(filter).sort({ createdAt: -1 });
+  res.json(products);
+});
+
+// @desc    Create a product
+// @route   POST /api/v1/products
+// @access  Private
+const createProduct = asyncHandler(async (req, res) => {
+  const { name, sku, description, category, price, unitOfMeasure, reorderLevel, status } = req.body;
+
+  const productExists = await Product.findOne({ sku });
+  if (productExists) {
+    res.status(400);
+    throw new Error('Product with this SKU already exists');
+  }
+
+  const product = await Product.create({
+    name, sku, description, category, price, unitOfMeasure, reorderLevel, status
+  });
+
+  res.status(201).json(product);
+});
+
+// @desc    Get product by ID
+// @route   GET /api/v1/products/:id
+// @access  Private
+const getProductById = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (product) {
+    res.json(product);
+  } else {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+});
+
+// @desc    Update a product
+// @route   PUT /api/v1/products/:id
+// @access  Private
+const updateProduct = asyncHandler(async (req, res) => {
+  const { name, sku, description, category, price, unitOfMeasure, reorderLevel, status } = req.body;
+
+  const product = await Product.findById(req.params.id);
+
+  if (product) {
+    if (sku && sku !== product.sku) {
+      const productExists = await Product.findOne({ sku });
+      if (productExists) {
+        res.status(400);
+        throw new Error('Product with this SKU already exists');
+      }
+    }
+
+    product.name = name || product.name;
+    product.sku = sku || product.sku;
+    product.description = description !== undefined ? description : product.description;
+    product.category = category !== undefined ? category : product.category;
+    product.price = price !== undefined ? price : product.price;
+    product.unitOfMeasure = unitOfMeasure !== undefined ? unitOfMeasure : product.unitOfMeasure;
+    product.reorderLevel = reorderLevel !== undefined ? reorderLevel : product.reorderLevel;
+    product.status = status || product.status;
+
+    const updatedProduct = await product.save();
+    res.json(updatedProduct);
+  } else {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+});
+
+// @desc    Delete a product
+// @route   DELETE /api/v1/products/:id
+// @access  Private
+const deleteProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+
+  if (!product) {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+
+  // Check if product is in use in Stock or Ledger
+  const stockExists = await Stock.findOne({ product: product._id, quantity: { $gt: 0 } });
+  if (stockExists) {
+    res.status(400);
+    throw new Error('Cannot delete product with existing stock in a warehouse. Archive it instead.');
+  }
+
+  const ledgerExists = await StockLedger.findOne({ product: product._id });
+  if (ledgerExists) {
+    res.status(400);
+    throw new Error('Cannot delete product with operation history. Archive it instead.');
+  }
+
+  await product.deleteOne();
+  res.json({ message: 'Product removed' });
+});
+
+module.exports = {
+  getProducts,
+  createProduct,
+  getProductById,
+  updateProduct,
+  deleteProduct
+};
