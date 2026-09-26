@@ -1,0 +1,1 @@
+# stock_sense-odoo-hackthon
