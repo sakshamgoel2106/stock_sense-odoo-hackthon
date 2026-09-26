@@ -50,8 +50,8 @@ describe('Smart Stock Audit API', () => {
     managerToken = generateToken(manager._id);
     staffToken = generateToken(staff._id);
 
-    productA = await Product.create({ name: 'Laptop', sku: 'LAP123', price: 1000 });
-    productB = await Product.create({ name: 'Mouse', sku: 'MOU123', price: 20 });
+    productA = await Product.create({ name: 'Laptop', sku: 'LAP123', prices: [{ currency: 'USD', amount: 1000 }] });
+    productB = await Product.create({ name: 'Mouse', sku: 'MOU123', prices: [{ currency: 'USD', amount: 20 }] });
     warehouse = await Warehouse.create({ name: 'Main Warehouse', code: 'MAIN1' });
 
     await Stock.create({ product: productA._id, warehouse: warehouse._id, quantity: 50 });

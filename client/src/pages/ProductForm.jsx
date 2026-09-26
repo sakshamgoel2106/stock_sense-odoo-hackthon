@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Plus, Trash2 } from 'lucide-react';
 import api from '../lib/api';
 
 const ProductForm = () => {
@@ -12,7 +13,7 @@ const ProductForm = () => {
     sku: '',
     description: '',
     category: '',
-    price: 0,
+    prices: [{ currency: 'USD', amount: 0 }],
     unitOfMeasure: 'Units',
     reorderLevel: 0,
     status: 'ACTIVE'
@@ -21,6 +22,8 @@ const ProductForm = () => {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [error, setError] = useState(null);
+
+  const CURRENCY_OPTIONS = ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'CAD', 'AUD'];
 
   useEffect(() => {
     if (isEdit) {
@@ -33,7 +36,7 @@ const ProductForm = () => {
             sku: p.sku,
             description: p.description || '',
             category: p.category || '',
-            price: p.price,
+            prices: p.prices && p.prices.length > 0 ? p.prices : [{ currency: 'USD', amount: 0 }],
             unitOfMeasure: p.unitOfMeasure,
             reorderLevel: p.reorderLevel,
             status: p.status
@@ -56,10 +59,41 @@ const ProductForm = () => {
     }));
   };
 
+  const handlePriceChange = (index, field, value) => {
+    const newPrices = [...formData.prices];
+    if (field === 'amount') {
+      newPrices[index][field] = Number(value);
+    } else {
+      newPrices[index][field] = value;
+    }
+    setFormData(prev => ({ ...prev, prices: newPrices }));
+  };
+
+  const addPrice = () => {
+    setFormData(prev => ({
+      ...prev,
+      prices: [...prev.prices, { currency: 'USD', amount: 0 }]
+    }));
+  };
+
+  const removePrice = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      prices: prev.prices.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Validate prices
+    if (formData.prices.length === 0) {
+      setError('At least one price is required.');
+      setLoading(false);
+      return;
+    }
 
     try {
       if (isEdit) {
@@ -155,21 +189,8 @@ const ProductForm = () => {
                 <option value="ARCHIVED">Archived</option>
               </select>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-              <input
-                type="number"
-                name="price"
-                step="0.01"
-                min="0"
-                className="w-full border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
-                value={formData.price}
-                onChange={handleChange}
-              />
-            </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 md:col-span-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure</label>
                 <input
@@ -192,6 +213,61 @@ const ProductForm = () => {
                 />
               </div>
             </div>
+            
+            {/* Multi-Currency Pricing Section */}
+            <div className="md:col-span-2 border-t pt-6 mt-2">
+              <div className="flex justify-between items-center mb-4">
+                <label className="block text-sm font-bold text-gray-800">Pricing (Multi-Currency)</label>
+                <button
+                  type="button"
+                  onClick={addPrice}
+                  className="text-sm bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-indigo-100 transition-colors"
+                >
+                  <Plus size={16} /> Add Currency
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {formData.prices.map((priceObj, index) => (
+                  <div key={index} className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Currency</label>
+                      <select
+                        value={priceObj.currency}
+                        onChange={(e) => handlePriceChange(index, 'currency', e.target.value)}
+                        className="w-full border border-gray-300 rounded shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2"
+                      >
+                        {CURRENCY_OPTIONS.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Amount</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={priceObj.amount}
+                        onChange={(e) => handlePriceChange(index, 'amount', e.target.value)}
+                        className="w-full border border-gray-300 rounded shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2"
+                      />
+                    </div>
+                    <div className="pt-5">
+                      <button
+                        type="button"
+                        onClick={() => removePrice(index)}
+                        disabled={formData.prices.length === 1}
+                        className="text-red-500 hover:text-red-700 p-2 disabled:opacity-30 transition-colors"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
         

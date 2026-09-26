@@ -27,7 +27,7 @@ const getProducts = asyncHandler(async (req, res) => {
 // @route   POST /api/v1/products
 // @access  Private
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, sku, description, category, price, unitOfMeasure, reorderLevel, status } = req.body;
+  const { name, sku, description, category, prices, unitOfMeasure, reorderLevel, status } = req.body;
 
   const productExists = await Product.findOne({ sku });
   if (productExists) {
@@ -36,7 +36,7 @@ const createProduct = asyncHandler(async (req, res) => {
   }
 
   const product = await Product.create({
-    name, sku, description, category, price, unitOfMeasure, reorderLevel, status
+    name, sku, description, category, prices, unitOfMeasure, reorderLevel, status
   });
 
   res.status(201).json(product);
@@ -59,7 +59,7 @@ const getProductById = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/products/:id
 // @access  Private
 const updateProduct = asyncHandler(async (req, res) => {
-  const { name, sku, description, category, price, unitOfMeasure, reorderLevel, status } = req.body;
+  const { name, sku, description, category, prices, unitOfMeasure, reorderLevel, status } = req.body;
 
   const product = await Product.findById(req.params.id);
 
@@ -76,7 +76,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     product.sku = sku || product.sku;
     product.description = description !== undefined ? description : product.description;
     product.category = category !== undefined ? category : product.category;
-    product.price = price !== undefined ? price : product.price;
+    product.prices = prices !== undefined ? prices : product.prices;
     product.unitOfMeasure = unitOfMeasure !== undefined ? unitOfMeasure : product.unitOfMeasure;
     product.reorderLevel = reorderLevel !== undefined ? reorderLevel : product.reorderLevel;
     product.status = status || product.status;

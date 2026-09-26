@@ -46,7 +46,7 @@ describe('Inventory Operations API', () => {
     admin = await User.create({ name: 'Admin', email: 'admin@test.com', password: 'password', role: 'ADMIN' });
     adminToken = generateToken(admin._id);
 
-    product = await Product.create({ name: 'Laptop', sku: 'LAP123', price: 1000 });
+    product = await Product.create({ name: 'Laptop', sku: 'LAP123', prices: [{ currency: 'USD', amount: 1000 }] });
     warehouseA = await Warehouse.create({ name: 'Main Warehouse', code: 'MAIN1' });
     warehouseB = await Warehouse.create({ name: 'Secondary Warehouse', code: 'SEC1' });
   });

@@ -93,7 +93,7 @@ const getStock = asyncHandler(async (req, res) => {
   }
 
   const stock = await Stock.find(filter)
-    .populate('product', 'name sku price unitOfMeasure reorderLevel status')
+    .populate('product', 'name sku prices unitOfMeasure reorderLevel status')
     .populate('warehouse', 'name location code');
   res.json(stock);
 });

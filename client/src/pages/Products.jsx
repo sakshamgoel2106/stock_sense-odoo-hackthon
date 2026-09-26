@@ -105,7 +105,7 @@ const Products = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Info</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prices</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -124,7 +124,17 @@ const Products = () => {
                       {product.unitOfMeasure}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${product.price?.toFixed(2)}
+                      <div className="flex flex-col gap-1">
+                        {product.prices && product.prices.length > 0 ? (
+                          product.prices.map((p, idx) => (
+                            <span key={idx} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-md inline-block">
+                              {p.amount.toFixed(2)} {p.currency}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

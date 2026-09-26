@@ -5,7 +5,10 @@ const productSchema = new mongoose.Schema({
   sku: { type: String, required: true, unique: true },
   description: { type: String },
   category: { type: String },
-  price: { type: Number, default: 0 },
+  prices: [{
+    currency: { type: String, required: true },
+    amount: { type: Number, required: true, default: 0 }
+  }],
   unitOfMeasure: { type: String, default: 'Units' },
   reorderLevel: { type: Number, default: 0 },
   status: { type: String, enum: ['ACTIVE', 'ARCHIVED'], default: 'ACTIVE' },
