@@ -13,10 +13,13 @@ const connectDB = require('./config/db');
 
 require('dotenv').config();
 
-// Connect to MongoDB
-connectDB();
-
 const app = express();
+
+// Connect to MongoDB middleware for serverless
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 app.use(helmet());
 app.use(cors());
