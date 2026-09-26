@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Eye, EyeOff, Package, BarChart3, Boxes, Warehouse } from "lucide-react";
 import { motion } from "motion/react";
 import { GoogleLogin } from '@react-oauth/google';
+import toast from 'react-hot-toast';
 
 const FEATURES = [
   { icon: Boxes, title: "Real-time Stock Tracking", desc: "Monitor inventory levels across every warehouse location instantly." },
@@ -26,7 +27,9 @@ export default function Login() {
       await googleLogin(credentialResponse.credential);
       navigate('/');
     } catch (err) {
-      setError(err?.response?.data?.message || 'Google authentication failed');
+      const msg = err?.response?.data?.message || 'Google authentication failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -40,7 +43,9 @@ export default function Login() {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError(err?.response?.data?.message || 'Invalid email or password');
+      const msg = err?.response?.data?.message || 'Invalid email or password';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -65,13 +70,7 @@ export default function Login() {
             <p className="mt-1.5 text-sm text-gray-500">Welcome back — your inventory awaits.</p>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              <span className="mt-0.5 shrink-0 text-red-400">⚠</span>
-              {error}
-            </div>
-          )}
+
 
           {/* Google */}
           <div className="flex justify-center mb-5">

@@ -1,23 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Package, MapPin, BarChart3, LayoutDashboard, 
   ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft, Sliders, 
   LogOut, UserCircle, BookOpen, Menu, X,
   Clock, TrendingUp, DollarSign, Bookmark, CheckSquare, ClipboardCheck,
-  Search, Bell
+  Search, Bell, Settings
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const Layout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // States for new header features
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  
+  const searchRef = useRef(null);
+  const notifRef = useRef(null);
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+    // Close dropdowns when clicking outside
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) setIsSearchOpen(false);
+      if (notifRef.current && !notifRef.current.contains(event.target)) setIsNotifOpen(false);
+      if (profileRef.current && !profileRef.current.contains(event.target)) setIsProfileOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     logout();
+    toast.success("Logged out successfully");
     navigate('/login');
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      toast(`Searching for: ${searchQuery}...`, { icon: '🔍' });
+      // In a real app, you would navigate to a global search results page here
+      setSearchQuery('');
+      setIsSearchOpen(false);
+    }
   };
 
   const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
@@ -66,28 +99,28 @@ const Layout = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden text-sm sm:text-base">
       {/* Mobile overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-20 md:hidden transition-opacity"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 w-64 bg-white border-r flex flex-col z-30 transition-transform duration-300 ease-in-out`}>
+      <aside className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 w-64 bg-white border-r flex flex-col z-30 transition-transform duration-300 ease-in-out shadow-xl md:shadow-none`}>
         <div className="h-16 flex items-center justify-between px-4 border-b">
           <Link to="/" className="flex items-center gap-2 text-indigo-600 font-bold text-xl">
             <Package />
             StockSense
           </Link>
-          <button className="md:hidden text-gray-500" onClick={() => setMobileMenuOpen(false)}>
-            <X size={24} />
+          <button className="md:hidden text-gray-500 hover:bg-gray-100 p-2 rounded-lg" onClick={() => setMobileMenuOpen(false)}>
+            <X size={20} />
           </button>
         </div>
         
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
           {navLinks.map(link => (
             <NavItem key={link.to} {...link} />
           ))}
@@ -109,20 +142,21 @@ const Layout = () => {
           ))}
         </nav>
 
-        <div className="p-4 border-t bg-gray-50">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <UserCircle size={32} className="text-gray-400" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
-              <p className="text-xs text-gray-500 truncate">{user?.role}</p>
-            </div>
+        {/* Removed redundant sidebar logout, moved to Profile dropdown */}
+        <div className="p-4 border-t bg-gray-50 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center overflow-hidden shrink-0">
+            {user?.avatar ? (
+              <img src={user.avatar} alt={user?.name} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-lg font-bold text-indigo-700">
+                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+              </span>
+            )}
           </div>
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <LogOut size={18} /> Logout
-          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900 truncate">{user?.name}</p>
+            <p className="text-xs font-medium text-gray-500 truncate bg-gray-200 inline-block px-2 py-0.5 rounded-full mt-0.5">{user?.role}</p>
+          </div>
         </div>
       </aside>
 
@@ -130,12 +164,12 @@ const Layout = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50/50">
         {/* Persistent Premium Header */}
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-b bg-white px-4 sm:px-6 shadow-sm">
-          <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-gray-600 mr-2">
+          <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-gray-600 mr-2 p-2 hover:bg-gray-100 rounded-lg">
             <Menu size={20} />
           </button>
           
           <h1 className="truncate text-lg font-semibold text-gray-900 hidden md:block">
-            Welcome back, {user?.name?.split(" ")[0] || "User"}
+            Welcome back, <span className="text-indigo-600">{user?.name?.split(" ")[0] || "User"}</span> 👋
           </h1>
           
           <div className="md:hidden flex items-center gap-2 text-indigo-600 font-bold text-lg">
@@ -143,24 +177,118 @@ const Layout = () => {
             StockSense
           </div>
           
-          <div className="ml-auto flex items-center gap-2">
-            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors" aria-label="Search">
-              <Search size={20} />
-            </button>
-            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors relative" aria-label="Notifications">
-              <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
+          <div className="ml-auto flex items-center gap-2 sm:gap-4 relative">
             
-            <div className="ml-2 h-8 w-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center overflow-hidden">
-              {user?.avatar ? (
-                <img src={user.avatar} alt={user?.name} className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-sm font-medium text-indigo-700">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </span>
+            {/* Global Search */}
+            <div className="relative flex items-center" ref={searchRef}>
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out flex items-center ${isSearchOpen ? 'w-48 sm:w-64 opacity-100 mr-2' : 'w-0 opacity-0'}`}>
+                <form onSubmit={handleSearch} className="w-full">
+                  <input
+                    type="text"
+                    autoFocus={isSearchOpen}
+                    placeholder="Search anything..."
+                    className="w-full pl-3 pr-8 py-1.5 text-sm bg-gray-100 border-transparent rounded-full focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600">
+                      <X size={14} />
+                    </button>
+                  )}
+                </form>
+              </div>
+              <button 
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                className={`p-2 rounded-full transition-colors ${isSearchOpen ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100'}`}
+                aria-label="Search"
+              >
+                <Search size={20} />
+              </button>
+            </div>
+
+            {/* Notifications Dropdown */}
+            <div className="relative" ref={notifRef}>
+              <button 
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                className={`p-2 rounded-full transition-colors relative ${isNotifOpen ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100'}`}
+                aria-label="Notifications"
+              >
+                <Bell size={20} />
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+              </button>
+              
+              {isNotifOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="px-4 py-2 border-b flex justify-between items-center">
+                    <h3 className="font-bold text-gray-800">Notifications</h3>
+                    <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-medium">3 New</span>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b transition-colors">
+                      <p className="text-sm text-gray-800 font-medium">Low Stock Alert</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Laptop (LAP123) is below reorder level.</p>
+                      <p className="text-xs text-gray-400 mt-1">10 mins ago</p>
+                    </div>
+                    <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b transition-colors">
+                      <p className="text-sm text-gray-800 font-medium">Transfer Approved</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Transfer T-002 was approved by Manager.</p>
+                      <p className="text-xs text-gray-400 mt-1">1 hour ago</p>
+                    </div>
+                    <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors">
+                      <p className="text-sm text-gray-800 font-medium">System Update</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Smart Audit module is now live.</p>
+                      <p className="text-xs text-gray-400 mt-1">1 day ago</p>
+                    </div>
+                  </div>
+                  <div className="px-4 py-2 border-t text-center">
+                    <button className="text-sm text-indigo-600 font-medium hover:text-indigo-800">Mark all as read</button>
+                  </div>
+                </div>
               )}
             </div>
+            
+            {/* Profile Dropdown */}
+            <div className="relative" ref={profileRef}>
+              <button 
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className={`ml-1 h-9 w-9 rounded-full bg-indigo-100 border-2 transition-all flex items-center justify-center overflow-hidden hover:shadow-md ${isProfileOpen ? 'border-indigo-400 ring-2 ring-indigo-200' : 'border-indigo-200 hover:border-indigo-300'}`}
+              >
+                {user?.avatar ? (
+                  <img src={user.avatar} alt={user?.name} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-sm font-bold text-indigo-700">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                )}
+              </button>
+              
+              {isProfileOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="px-4 py-3 border-b border-gray-50">
+                    <p className="text-sm font-bold text-gray-900 truncate">{user?.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                  </div>
+                  <div className="py-1">
+                    <button onClick={() => { setIsProfileOpen(false); toast.success('Profile settings opened'); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <UserCircle size={16} /> My Profile
+                    </button>
+                    <button onClick={() => { setIsProfileOpen(false); toast('Settings feature coming soon!', { icon: '⚙️' }); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <Settings size={16} /> Preferences
+                    </button>
+                  </div>
+                  <div className="py-1 border-t border-gray-50">
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut size={16} /> Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
         </header>
 

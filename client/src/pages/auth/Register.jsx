@@ -30,7 +30,9 @@ export default function Register() {
       await googleLogin(credentialResponse.credential);
       navigate('/');
     } catch (err) {
-      setError(err?.response?.data?.message || 'Google registration failed');
+      const msg = err?.response?.data?.message || 'Google registration failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -45,7 +47,9 @@ export default function Register() {
       await register(name, email, password, role);
       navigate('/');
     } catch (err) {
-      setError(err?.response?.data?.message || 'Registration failed');
+      const msg = err?.response?.data?.message || 'Registration failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
