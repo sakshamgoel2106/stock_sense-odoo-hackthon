@@ -8,6 +8,7 @@ const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('WORKER');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const { register, googleLogin } = useAuth();
@@ -31,7 +32,7 @@ const Register = () => {
     try {
       setLoading(true);
       setError(null);
-      await register(name, email, password);
+      await register(name, email, password, role);
       navigate('/');
     } catch (err) {
       setError(err?.response?.data?.message || 'Registration failed');
@@ -77,11 +78,23 @@ const Register = () => {
                 name="password"
                 type="password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+            </div>
+            <div>
+              <select
+                name="role"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
+                <option value="WORKER">Warehouse Staff (Worker)</option>
+                <option value="MANAGER">Inventory Manager</option>
+              </select>
             </div>
           </div>
 
