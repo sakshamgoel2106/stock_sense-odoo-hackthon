@@ -33,6 +33,14 @@ module.exports = function tenantPlugin(schema) {
     next();
   });
 
+  schema.pre('validate', function (next) {
+    const ownerId = tenantStorage.getStore();
+    if (ownerId && !this.owner) {
+      this.owner = ownerId;
+    }
+    next();
+  });
+
   schema.pre('save', function (next) {
     const ownerId = tenantStorage.getStore();
     if (ownerId && !this.owner) {
