@@ -6,6 +6,7 @@ const { notFound, errorHandler } = require('./middleware/error.middleware');
 const inventoryRoutes = require('./routes/inventory.routes');
 const productRoutes = require('./routes/product.routes');
 const warehouseRoutes = require('./routes/warehouse.routes');
+const authRoutes = require('./routes/auth.routes');
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Routes
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/warehouses', warehouseRoutes);

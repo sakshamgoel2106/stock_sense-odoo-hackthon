@@ -9,9 +9,9 @@ const {
   getLedger
 } = require('../controllers/inventory.controller');
 
-// Since we are Member 1 and Member 4 handles auth, we'll assume a 'protect' middleware exists.
-// For now, we'll implement a dummy protect or skip it to test our logic.
-// const { protect } = require('../middleware/auth.middleware');
+const { protect } = require('../middleware/auth.middleware');
+
+router.use(protect);
 
 router.route('/operations')
   .post(createOperation)

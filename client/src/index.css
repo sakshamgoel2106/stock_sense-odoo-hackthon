@@ -28,10 +28,8 @@
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
   body {
-    @apply bg-gray-50 text-foreground;
+    background-color: #f9fafb;
+    color: hsl(var(--foreground));
   }
 }

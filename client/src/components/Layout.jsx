@@ -1,49 +1,125 @@
-import React from 'react';
-import { Outlet, Link } from 'react-router-dom';
-import { Package, MapPin, BarChart3, LayoutDashboard, ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft, Sliders } from 'lucide-react';
+import React, { useState } from 'react';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
+import { 
+  Package, MapPin, BarChart3, LayoutDashboard, 
+  ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft, Sliders, 
+  LogOut, UserCircle, BookOpen, Menu, X
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Layout = () => {
-  return (
-    <div className="flex h-screen bg-gray-50">
-      <aside className="w-64 bg-white border-r flex flex-col">
-        <div className="p-4 border-b flex items-center gap-2 text-indigo-600 font-bold text-xl">
-          <Package />
-          StockSense
-        </div>
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <Link to="/" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <Link to="/products" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
-            <Package size={20} /> Products
-          </Link>
-          <Link to="/warehouses" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
-            <MapPin size={20} /> Warehouses
-          </Link>
-          <Link to="/stock-overview" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
-            <BarChart3 size={20} /> Stock Overview
-          </Link>
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-          <div className="pt-4 pb-2">
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const navLinks = [
+    { to: "/", icon: <LayoutDashboard size={20} />, label: "Dashboard" },
+    { to: "/products", icon: <Package size={20} />, label: "Products" },
+    { to: "/warehouses", icon: <MapPin size={20} />, label: "Warehouses" },
+    { to: "/stock-overview", icon: <BarChart3 size={20} />, label: "Stock Overview" },
+    { to: "/ledger", icon: <BookOpen size={20} />, label: "Stock Ledger" },
+  ];
+
+  const operationLinks = [
+    { to: "/receipts", icon: <ArrowDownToLine size={20} />, label: "Receipts" },
+    { to: "/deliveries", icon: <ArrowUpFromLine size={20} />, label: "Deliveries" },
+    { to: "/transfers", icon: <ArrowRightLeft size={20} />, label: "Transfers" },
+    { to: "/adjustments", icon: <Sliders size={20} />, label: "Adjustments" },
+  ];
+
+  const NavItem = ({ to, icon, label }) => {
+    const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+    return (
+      <Link 
+        to={to} 
+        onClick={() => setMobileMenuOpen(false)}
+        className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+          isActive 
+            ? 'bg-indigo-50 text-indigo-700 font-medium' 
+            : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-600'
+        }`}
+      >
+        {icon} {label}
+      </Link>
+    );
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 w-64 bg-white border-r flex flex-col z-30 transition-transform duration-300 ease-in-out`}>
+        <div className="h-16 flex items-center justify-between px-4 border-b">
+          <Link to="/" className="flex items-center gap-2 text-indigo-600 font-bold text-xl">
+            <Package />
+            StockSense
+          </Link>
+          <button className="md:hidden text-gray-500" onClick={() => setMobileMenuOpen(false)}>
+            <X size={24} />
+          </button>
+        </div>
+        
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          {navLinks.map(link => (
+            <NavItem key={link.to} {...link} />
+          ))}
+
+          <div className="pt-6 pb-2">
             <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Operations</p>
           </div>
-          <Link to="/receipts" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
-            <ArrowDownToLine size={20} /> Receipts
-          </Link>
-          <Link to="/deliveries" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
-            <ArrowUpFromLine size={20} /> Deliveries
-          </Link>
-          <Link to="/transfers" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
-            <ArrowRightLeft size={20} /> Transfers
-          </Link>
-          <Link to="/adjustments" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
-            <Sliders size={20} /> Adjustments
-          </Link>
+          
+          {operationLinks.map(link => (
+            <NavItem key={link.to} {...link} />
+          ))}
         </nav>
+
+        <div className="p-4 border-t bg-gray-50">
+          <div className="flex items-center gap-3 mb-4 px-2">
+            <UserCircle size={32} className="text-gray-400" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.role}</p>
+            </div>
+          </div>
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <LogOut size={18} /> Logout
+          </button>
+        </div>
       </aside>
-      <main className="flex-1 overflow-auto p-8">
-        <Outlet />
-      </main>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top Header for Mobile */}
+        <header className="md:hidden h-16 bg-white border-b flex items-center justify-between px-4">
+          <div className="flex items-center gap-2 text-indigo-600 font-bold text-lg">
+            <Package size={24} />
+            StockSense
+          </div>
+          <button onClick={() => setMobileMenuOpen(true)} className="text-gray-600">
+            <Menu size={24} />
+          </button>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };

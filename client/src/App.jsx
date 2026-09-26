@@ -1,6 +1,12 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './context/AuthContext';
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 import Products from './pages/Products';
 import ProductForm from './pages/ProductForm';
 import Warehouses from './pages/Warehouses';
@@ -14,34 +20,47 @@ import Transfers from './pages/Transfers';
 import TransferForm from './pages/TransferForm';
 import Adjustments from './pages/Adjustments';
 import AdjustmentForm from './pages/AdjustmentForm';
+import Dashboard from './pages/Dashboard';
+import StockLedger from './pages/StockLedger';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<div className="text-2xl font-bold">Dashboard (Member 4)</div>} />
-          <Route path="products" element={<Products />} />
-          <Route path="products/new" element={<ProductForm />} />
-          <Route path="products/:id/edit" element={<ProductForm />} />
-          
-          <Route path="warehouses" element={<Warehouses />} />
-          <Route path="warehouses/new" element={<WarehouseForm />} />
-          <Route path="warehouses/:id/edit" element={<WarehouseForm />} />
-          
-          <Route path="stock-overview" element={<StockOverview />} />
-          
-          <Route path="receipts" element={<Receipts />} />
-          <Route path="receipts/new" element={<ReceiptForm />} />
-          <Route path="deliveries" element={<Deliveries />} />
-          <Route path="deliveries/new" element={<DeliveryForm />} />
-          <Route path="transfers" element={<Transfers />} />
-          <Route path="transfers/new" element={<TransferForm />} />
-          <Route path="adjustments" element={<Adjustments />} />
-          <Route path="adjustments/new" element={<AdjustmentForm />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Dashboard />} />
+              
+              <Route path="products" element={<Products />} />
+              <Route path="products/new" element={<ProductForm />} />
+              <Route path="products/:id/edit" element={<ProductForm />} />
+              
+              <Route path="warehouses" element={<Warehouses />} />
+              <Route path="warehouses/new" element={<WarehouseForm />} />
+              <Route path="warehouses/:id/edit" element={<WarehouseForm />} />
+              
+              <Route path="stock-overview" element={<StockOverview />} />
+              <Route path="ledger" element={<StockLedger />} />
+              
+              <Route path="receipts" element={<Receipts />} />
+              <Route path="receipts/new" element={<ReceiptForm />} />
+              <Route path="deliveries" element={<Deliveries />} />
+              <Route path="deliveries/new" element={<DeliveryForm />} />
+              <Route path="transfers" element={<Transfers />} />
+              <Route path="transfers/new" element={<TransferForm />} />
+              <Route path="adjustments" element={<Adjustments />} />
+              <Route path="adjustments/new" element={<AdjustmentForm />} />
+            </Route>
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

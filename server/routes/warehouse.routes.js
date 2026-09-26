@@ -7,6 +7,9 @@ const {
   updateWarehouse,
   deleteWarehouse
 } = require('../controllers/warehouse.controller');
+const { protect } = require('../middleware/auth.middleware');
+
+router.use(protect);
 
 router.route('/')
   .get(getWarehouses)
