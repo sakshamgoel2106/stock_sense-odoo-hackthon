@@ -97,7 +97,7 @@ VITE_API_BASE_URL=http://localhost:5000/api/v1
 
 - **Frontend (Live)**: [https://stock-sense-odoo-hackthon-iv5r.vercel.app/](https://stock-sense-odoo-hackthon-iv5r.vercel.app/)
 - **Backend API**: [https://stock-sense-odoo-hackthon.vercel.app/api/v1](https://stock-sense-odoo-hackthon.vercel.app/api/v1)
-- **Demo Video**: [TBD]
+- **Demo Video**:[https://youtu.be/dGGIwiUV6Ug?si=wz78s3EJzpOxL99k]
 
 ## 📸 Screenshots
 
