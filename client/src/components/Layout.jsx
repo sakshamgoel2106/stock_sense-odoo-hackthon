@@ -21,6 +21,7 @@ const Layout = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]); // Empty for now until a real backend notification system is built
   
   const searchRef = useRef(null);
   const notifRef = useRef(null);
@@ -214,35 +215,44 @@ const Layout = () => {
                 aria-label="Notifications"
               >
                 <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                {notifications.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                )}
               </button>
               
               {isNotifOpen && (
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
                   <div className="px-4 py-2 border-b flex justify-between items-center">
                     <h3 className="font-bold text-gray-800">Notifications</h3>
-                    <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-medium">3 New</span>
+                    {notifications.length > 0 && (
+                      <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{notifications.length} New</span>
+                    )}
                   </div>
                   <div className="max-h-80 overflow-y-auto">
-                    <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b transition-colors">
-                      <p className="text-sm text-gray-800 font-medium">Low Stock Alert</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Laptop (LAP123) is below reorder level.</p>
-                      <p className="text-xs text-gray-400 mt-1">10 mins ago</p>
-                    </div>
-                    <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b transition-colors">
-                      <p className="text-sm text-gray-800 font-medium">Transfer Approved</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Transfer T-002 was approved by Manager.</p>
-                      <p className="text-xs text-gray-400 mt-1">1 hour ago</p>
-                    </div>
-                    <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors">
-                      <p className="text-sm text-gray-800 font-medium">System Update</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Smart Audit module is now live.</p>
-                      <p className="text-xs text-gray-400 mt-1">1 day ago</p>
-                    </div>
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                        You have no new notifications.
+                      </div>
+                    ) : (
+                      notifications.map((notif, idx) => (
+                        <div key={idx} className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b transition-colors">
+                          <p className="text-sm text-gray-800 font-medium">{notif.title}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{notif.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">{notif.time}</p>
+                        </div>
+                      ))
+                    )}
                   </div>
-                  <div className="px-4 py-2 border-t text-center">
-                    <button className="text-sm text-indigo-600 font-medium hover:text-indigo-800">Mark all as read</button>
-                  </div>
+                  {notifications.length > 0 && (
+                    <div className="px-4 py-2 border-t text-center">
+                      <button 
+                        onClick={() => { setNotifications([]); setIsNotifOpen(false); }} 
+                        className="text-sm text-indigo-600 font-medium hover:text-indigo-800"
+                      >
+                        Mark all as read
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

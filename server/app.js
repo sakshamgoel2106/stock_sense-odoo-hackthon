@@ -2,6 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const mongoose = require('mongoose');
+const tenantPlugin = require('./utils/tenantPlugin');
+
+// Apply multi-tenancy plugin to all schemas globally BEFORE models are required
+mongoose.plugin(tenantPlugin);
+
 const { notFound, errorHandler } = require('./middleware/error.middleware');
 const inventoryRoutes = require('./routes/inventory.routes');
 const productRoutes = require('./routes/product.routes');
