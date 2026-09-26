@@ -1,12 +1,14 @@
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const request = require('supertest');
+const jwt = require('jsonwebtoken');
 const app = require('../app');
 const Product = require('../models/Product');
 const Warehouse = require('../models/Warehouse');
 const Stock = require('../models/Stock');
 const Operation = require('../models/Operation');
 const StockLedger = require('../models/StockLedger');
+const User = require('../models/User');
 
 let mongoServer;
 
@@ -31,19 +33,28 @@ afterEach(async () => {
   }
 });
 
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'secret', {
+    expiresIn: '30d',
+  });
+};
+
 describe('Inventory Operations API', () => {
-  let product, warehouseA, warehouseB;
+  let product, warehouseA, warehouseB, admin, adminToken;
 
   beforeEach(async () => {
+    admin = await User.create({ name: 'Admin', email: 'admin@test.com', password: 'password', role: 'ADMIN' });
+    adminToken = generateToken(admin._id);
+
     product = await Product.create({ name: 'Laptop', sku: 'LAP123', price: 1000 });
     warehouseA = await Warehouse.create({ name: 'Main Warehouse', code: 'MAIN1' });
     warehouseB = await Warehouse.create({ name: 'Secondary Warehouse', code: 'SEC1' });
   });
 
   it('1. Receipt increases stock correctly', async () => {
-    // Create Receipt Operation
     const opRes = await request(app)
       .post('/api/v1/inventory/operations')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         type: 'RECEIPT',
         destinationWarehouse: warehouseA._id,
@@ -52,28 +63,26 @@ describe('Inventory Operations API', () => {
     expect(opRes.statusCode).toBe(201);
     const opId = opRes.body._id;
 
-    // Validate
-    const valRes = await request(app).post(`/api/v1/inventory/operations/${opId}/validate`);
+    const valRes = await request(app)
+      .post(`/api/v1/inventory/operations/${opId}/validate`)
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(valRes.statusCode).toBe(200);
 
-    // Check Stock
     const stock = await Stock.findOne({ product: product._id, warehouse: warehouseA._id });
     expect(stock).not.toBeNull();
     expect(stock.quantity).toBe(50);
 
-    // Check Ledger
     const ledger = await StockLedger.findOne({ operation: opId });
     expect(ledger).not.toBeNull();
     expect(ledger.quantityChange).toBe(50);
   });
 
   it('2. Delivery decreases stock correctly', async () => {
-    // Initial Stock
     await Stock.create({ product: product._id, warehouse: warehouseA._id, quantity: 100 });
 
-    // Create Delivery Operation
     const opRes = await request(app)
       .post('/api/v1/inventory/operations')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         type: 'DELIVERY',
         sourceWarehouse: warehouseA._id,
@@ -81,10 +90,10 @@ describe('Inventory Operations API', () => {
       });
     const opId = opRes.body._id;
 
-    // Validate
-    await request(app).post(`/api/v1/inventory/operations/${opId}/validate`);
+    await request(app)
+      .post(`/api/v1/inventory/operations/${opId}/validate`)
+      .set('Authorization', `Bearer ${adminToken}`);
 
-    // Check Stock
     const stock = await Stock.findOne({ product: product._id, warehouse: warehouseA._id });
     expect(stock.quantity).toBe(80);
   });
@@ -94,6 +103,7 @@ describe('Inventory Operations API', () => {
 
     const opRes = await request(app)
       .post('/api/v1/inventory/operations')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         type: 'DELIVERY',
         sourceWarehouse: warehouseA._id,
@@ -101,10 +111,11 @@ describe('Inventory Operations API', () => {
       });
     const opId = opRes.body._id;
 
-    const valRes = await request(app).post(`/api/v1/inventory/operations/${opId}/validate`);
+    const valRes = await request(app)
+      .post(`/api/v1/inventory/operations/${opId}/validate`)
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(valRes.statusCode).toBe(400);
 
-    // Stock should remain unchanged
     const stock = await Stock.findOne({ product: product._id, warehouse: warehouseA._id });
     expect(stock.quantity).toBe(10);
   });
@@ -115,6 +126,7 @@ describe('Inventory Operations API', () => {
 
     const opRes = await request(app)
       .post('/api/v1/inventory/operations')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         type: 'TRANSFER',
         sourceWarehouse: warehouseA._id,
@@ -123,7 +135,14 @@ describe('Inventory Operations API', () => {
       });
     const opId = opRes.body._id;
 
-    await request(app).post(`/api/v1/inventory/operations/${opId}/validate`);
+    const approveRes = await request(app)
+      .put(`/api/v1/inventory/operations/${opId}/approve`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(approveRes.statusCode).toBe(200);
+
+    await request(app)
+      .post(`/api/v1/inventory/operations/${opId}/validate`)
+      .set('Authorization', `Bearer ${adminToken}`);
 
     const stockA = await Stock.findOne({ product: product._id, warehouse: warehouseA._id });
     const stockB = await Stock.findOne({ product: product._id, warehouse: warehouseB._id });
@@ -137,17 +156,20 @@ describe('Inventory Operations API', () => {
 
     const opRes = await request(app)
       .post('/api/v1/inventory/operations')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         type: 'ADJUSTMENT',
-        destinationWarehouse: warehouseA._id, // destinationWarehouse holds the target for adjustments
-        items: [{ product: product._id, quantity: 45 }] // 45 is the counted quantity
+        destinationWarehouse: warehouseA._id,
+        items: [{ product: product._id, quantity: 45 }]
       });
     const opId = opRes.body._id;
 
-    await request(app).post(`/api/v1/inventory/operations/${opId}/validate`);
+    await request(app)
+      .post(`/api/v1/inventory/operations/${opId}/validate`)
+      .set('Authorization', `Bearer ${adminToken}`);
 
     const stock = await Stock.findOne({ product: product._id, warehouse: warehouseA._id });
-    expect(stock.quantity).toBe(45); // Delta was -5
+    expect(stock.quantity).toBe(45);
 
     const ledger = await StockLedger.findOne({ operation: opId });
     expect(ledger.quantityChange).toBe(-5);
@@ -156,6 +178,7 @@ describe('Inventory Operations API', () => {
   it('6. Revalidating an operation does not change stock again', async () => {
     const opRes = await request(app)
       .post('/api/v1/inventory/operations')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         type: 'RECEIPT',
         destinationWarehouse: warehouseA._id,
@@ -163,19 +186,25 @@ describe('Inventory Operations API', () => {
       });
     const opId = opRes.body._id;
 
-    await request(app).post(`/api/v1/inventory/operations/${opId}/validate`); // First validation
-    const valRes2 = await request(app).post(`/api/v1/inventory/operations/${opId}/validate`); // Second validation
+    await request(app)
+      .post(`/api/v1/inventory/operations/${opId}/validate`)
+      .set('Authorization', `Bearer ${adminToken}`);
+      
+    const valRes2 = await request(app)
+      .post(`/api/v1/inventory/operations/${opId}/validate`)
+      .set('Authorization', `Bearer ${adminToken}`);
     
     expect(valRes2.statusCode).toBe(400);
     expect(valRes2.body.message).toMatch(/already validated/i);
 
     const stock = await Stock.findOne({ product: product._id, warehouse: warehouseA._id });
-    expect(stock.quantity).toBe(50); // Did not increase to 100
+    expect(stock.quantity).toBe(50);
   });
 
   it('8. Invalid quantities and invalid IDs are rejected', async () => {
     const opRes = await request(app)
       .post('/api/v1/inventory/operations')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         type: 'RECEIPT',
         destinationWarehouse: warehouseA._id,

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Package, AlertTriangle, AlertCircle, Clock, TrendingUp, DollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
+  const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,21 +14,33 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [productsRes, stockRes, operationsRes, ledgerRes, warehouseRes, valuationRes] = await Promise.all([
+        const isManager = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+
+        const requests = [
           api.get('/products'),
           api.get('/inventory/stock'),
           api.get('/inventory/operations'),
-          api.get('/inventory/ledger'),
-          api.get('/warehouses'),
-          api.get('/inventory/valuation')
-        ]);
+          api.get('/warehouses')
+        ];
 
-        const products = productsRes.data;
-        const stock = stockRes.data;
-        const operations = operationsRes.data;
-        const ledger = ledgerRes.data;
-        const warehouses = warehouseRes.data;
-        const valuation = valuationRes.data;
+        if (isManager) {
+          requests.push(api.get('/inventory/ledger'));
+          requests.push(api.get('/inventory/valuation'));
+        }
+
+        const responses = await Promise.all(requests);
+
+        const products = responses[0].data;
+        const stock = responses[1].data;
+        const operations = responses[2].data;
+        const warehouses = responses[3].data;
+        
+        let ledger = [];
+        let valuation = [];
+        if (isManager) {
+          ledger = responses[4].data;
+          valuation = responses[5].data;
+        }
 
         // KPI Calculations
         const totalPortfolioValue = valuation.reduce((acc, curr) => acc + curr.totalValue, 0);
@@ -116,13 +130,15 @@ const Dashboard = () => {
             <p className="text-2xl font-bold text-gray-900">{stats.totalProducts}</p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><DollarSign size={24} /></div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Inventory Value</p>
-            <p className="text-2xl font-bold text-gray-900">₹{stats.totalPortfolioValue?.toLocaleString('en-IN')}</p>
+        {user?.role === 'MANAGER' || user?.role === 'ADMIN' ? (
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><DollarSign size={24} /></div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Inventory Value</p>
+              <p className="text-2xl font-bold text-gray-900">₹{stats.totalPortfolioValue?.toLocaleString('en-IN')}</p>
+            </div>
           </div>
-        </div>
+        ) : null}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
           <div className="p-3 bg-green-50 text-green-600 rounded-lg"><TrendingUp size={24} /></div>
           <div>
@@ -216,39 +232,41 @@ const Dashboard = () => {
       </div>
 
       {/* Recent Ledger / Activity */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Recent Stock Movements</h2>
-        {stats.recentLedger.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Date</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Operation</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Product</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Warehouse</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Change</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {stats.recentLedger.map(entry => (
-                  <tr key={entry._id} className="hover:bg-gray-50">
-                    <td className="py-3 text-sm text-gray-500">{new Date(entry.timestamp).toLocaleString()}</td>
-                    <td className="py-3 text-sm font-medium text-gray-900">{entry.operation?.type || 'UNKNOWN'}</td>
-                    <td className="py-3 text-sm text-gray-500">{entry.product?.name || '-'}</td>
-                    <td className="py-3 text-sm text-gray-500">{entry.warehouse?.name || '-'}</td>
-                    <td className={`py-3 text-sm text-right font-medium ${entry.quantityChange > 0 ? 'text-green-600' : entry.quantityChange < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                      {entry.quantityChange > 0 ? '+' : ''}{entry.quantityChange}
-                    </td>
+      {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">Recent Stock Movements</h2>
+          {stats.recentLedger.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Date</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Operation</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Product</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Warehouse</th>
+                    <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Change</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="h-32 flex items-center justify-center text-gray-400">No recent activities</div>
-        )}
-      </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {stats.recentLedger.map(entry => (
+                    <tr key={entry._id} className="hover:bg-gray-50">
+                      <td className="py-3 text-sm text-gray-500">{new Date(entry.timestamp).toLocaleString()}</td>
+                      <td className="py-3 text-sm font-medium text-gray-900">{entry.operation?.type || 'UNKNOWN'}</td>
+                      <td className="py-3 text-sm text-gray-500">{entry.product?.name || '-'}</td>
+                      <td className="py-3 text-sm text-gray-500">{entry.warehouse?.name || '-'}</td>
+                      <td className={`py-3 text-sm text-right font-medium ${entry.quantityChange > 0 ? 'text-green-600' : entry.quantityChange < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                        {entry.quantityChange > 0 ? '+' : ''}{entry.quantityChange}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="h-32 flex items-center justify-center text-gray-400">No recent activities</div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
