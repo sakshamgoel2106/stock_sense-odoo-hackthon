@@ -14,7 +14,7 @@ const {
   rejectOperation
 } = require('../controllers/inventory.controller');
 
-const { protect } = require('../middleware/auth.middleware');
+const { protect, authorize } = require('../middleware/auth.middleware');
 
 router.use(protect);
 
@@ -29,24 +29,24 @@ router.route('/operations/:id/validate')
   .post(validateOperationController);
 
 router.route('/operations/:id/approve')
-  .put(approveOperation);
+  .put(authorize('ADMIN', 'MANAGER'), approveOperation);
 
 router.route('/operations/:id/reject')
-  .put(rejectOperation);
+  .put(authorize('ADMIN', 'MANAGER'), rejectOperation);
 
 router.route('/stock')
   .get(getStock);
 
 router.route('/ledger')
-  .get(getLedger);
+  .get(authorize('ADMIN', 'MANAGER'), getLedger);
 
 router.route('/aging')
-  .get(getStockAging);
+  .get(authorize('ADMIN', 'MANAGER'), getStockAging);
 
 router.route('/valuation')
-  .get(getValuation);
+  .get(authorize('ADMIN', 'MANAGER'), getValuation);
 
 router.route('/forecast')
-  .get(getForecast);
+  .get(authorize('ADMIN', 'MANAGER'), getForecast);
 
 module.exports = router;

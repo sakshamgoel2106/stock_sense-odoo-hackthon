@@ -19,12 +19,14 @@ const Layout = () => {
     navigate('/login');
   };
 
+  const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+
   const navLinks = [
     { to: "/", icon: <LayoutDashboard size={20} />, label: "Dashboard" },
     { to: "/products", icon: <Package size={20} />, label: "Products" },
     { to: "/warehouses", icon: <MapPin size={20} />, label: "Warehouses" },
     { to: "/stock-overview", icon: <BarChart3 size={20} />, label: "Stock Overview" },
-    { to: "/ledger", icon: <BookOpen size={20} />, label: "Stock Ledger" },
+    ...(isManagerOrAdmin ? [{ to: "/ledger", icon: <BookOpen size={20} />, label: "Stock Ledger" }] : []),
   ];
 
   const operationLinks = [
@@ -35,11 +37,13 @@ const Layout = () => {
   ];
 
   const advancedLinks = [
-    { to: "/aging", icon: <Clock size={20} />, label: "Stock Aging" },
-    { to: "/forecasting", icon: <TrendingUp size={20} />, label: "Forecasting" },
-    { to: "/valuation", icon: <DollarSign size={20} />, label: "Valuation" },
+    ...(isManagerOrAdmin ? [
+      { to: "/aging", icon: <Clock size={20} />, label: "Stock Aging" },
+      { to: "/forecasting", icon: <TrendingUp size={20} />, label: "Forecasting" },
+      { to: "/valuation", icon: <DollarSign size={20} />, label: "Valuation" },
+      { to: "/approvals", icon: <CheckSquare size={20} />, label: "Transfer Approvals" },
+    ] : []),
     { to: "/reservations", icon: <Bookmark size={20} />, label: "Reservations" },
-    { to: "/approvals", icon: <CheckSquare size={20} />, label: "Transfer Approvals" },
     { to: "/audits", icon: <ClipboardCheck size={20} />, label: "Smart Audits" },
   ];
 
