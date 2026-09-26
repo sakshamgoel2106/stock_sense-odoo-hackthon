@@ -1,9 +1,7 @@
 const mongoose = require('mongoose');
 
-let isConnected = false;
-
 const connectDB = async () => {
-  if (isConnected) {
+  if (mongoose.connection.readyState >= 1) {
     console.log('MongoDB is already connected');
     return;
   }
@@ -13,7 +11,6 @@ const connectDB = async () => {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000
     });
-    isConnected = conn.connections[0].readyState;
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`Error: ${error.message}`);
