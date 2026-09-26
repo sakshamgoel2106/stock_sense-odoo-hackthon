@@ -1,4 +1,8 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../utils/tenantPlugin');
+
+// Apply multi-tenancy plugin to all schemas globally
+mongoose.plugin(tenantPlugin);
 
 let isConnected = false;
 

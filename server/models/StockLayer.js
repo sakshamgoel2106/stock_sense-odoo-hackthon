@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const stockLayerSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   warehouse: { type: mongoose.Schema.Types.ObjectId, ref: 'Warehouse', required: true },
   operation: { type: mongoose.Schema.Types.ObjectId, ref: 'Operation' },

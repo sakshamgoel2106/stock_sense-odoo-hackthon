@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
+const tenantStorage = require('../utils/tenantStorage');
 
 const protect = asyncHandler(async (req, res, next) => {
   let token;
@@ -19,7 +20,9 @@ const protect = asyncHandler(async (req, res, next) => {
         throw new Error('Not authorized, user not found');
       }
 
-      next();
+      tenantStorage.run(req.user._id, () => {
+        next();
+      });
     } catch (error) {
       console.error(error);
       res.status(401);

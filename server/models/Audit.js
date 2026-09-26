@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const auditItemSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   countedQuantity: { type: Number, min: 0 },
   systemQuantitySnapshot: { type: Number },

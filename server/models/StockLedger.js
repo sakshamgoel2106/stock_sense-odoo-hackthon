@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const stockLedgerSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   operation: { type: mongoose.Schema.Types.ObjectId, ref: 'Operation' },
   operationType: { type: String, enum: ['RECEIPT', 'DELIVERY', 'TRANSFER', 'ADJUSTMENT'] },
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
