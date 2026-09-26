@@ -9,6 +9,12 @@ const warehouseRoutes = require('./routes/warehouse.routes');
 const authRoutes = require('./routes/auth.routes');
 const reservationRoutes = require('./routes/reservation.routes');
 const auditRoutes = require('./routes/audit.routes');
+const connectDB = require('./config/db');
+
+require('dotenv').config();
+
+// Connect to MongoDB
+connectDB();
 
 const app = express();
 
