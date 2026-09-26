@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Box } from 'lucide-react';
 import api from '../lib/api';
 
@@ -7,7 +7,8 @@ const Products = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [search, setSearch] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
 
@@ -31,10 +32,25 @@ const Products = () => {
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
+      // Update URL silently when search changes, but don't if they navigated here with a query param already
+      if (search) {
+        searchParams.set('search', search);
+      } else {
+        searchParams.delete('search');
+      }
+      setSearchParams(searchParams, { replace: true });
       fetchProducts();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
   }, [search, category, status]);
+
+  // If URL changes from outside (e.g., clicking Header search bar while already on Products page)
+  useEffect(() => {
+    const query = searchParams.get('search');
+    if (query !== null && query !== search) {
+      setSearch(query);
+    }
+  }, [searchParams]);
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this product?')) {

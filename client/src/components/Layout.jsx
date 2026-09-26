@@ -46,8 +46,7 @@ const Layout = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      toast(`Searching for: ${searchQuery}...`, { icon: '🔍' });
-      // In a real app, you would navigate to a global search results page here
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery('');
       setIsSearchOpen(false);
     }
