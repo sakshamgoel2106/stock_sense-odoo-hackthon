@@ -4,7 +4,8 @@ import {
   Package, MapPin, BarChart3, LayoutDashboard, 
   ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft, Sliders, 
   LogOut, UserCircle, BookOpen, Menu, X,
-  Clock, TrendingUp, DollarSign, Bookmark, CheckSquare, ClipboardCheck
+  Clock, TrendingUp, DollarSign, Bookmark, CheckSquare, ClipboardCheck,
+  Search, Bell
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -126,19 +127,44 @@ const Layout = () => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header for Mobile */}
-        <header className="md:hidden h-16 bg-white border-b flex items-center justify-between px-4">
-          <div className="flex items-center gap-2 text-indigo-600 font-bold text-lg">
-            <Package size={24} />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50/50">
+        {/* Persistent Premium Header */}
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-b bg-white px-4 sm:px-6 shadow-sm">
+          <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-gray-600 mr-2">
+            <Menu size={20} />
+          </button>
+          
+          <h1 className="truncate text-lg font-semibold text-gray-900 hidden md:block">
+            Welcome back, {user?.name?.split(" ")[0] || "User"}
+          </h1>
+          
+          <div className="md:hidden flex items-center gap-2 text-indigo-600 font-bold text-lg">
+            <Package size={20} />
             StockSense
           </div>
-          <button onClick={() => setMobileMenuOpen(true)} className="text-gray-600">
-            <Menu size={24} />
-          </button>
+          
+          <div className="ml-auto flex items-center gap-2">
+            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors" aria-label="Search">
+              <Search size={20} />
+            </button>
+            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors relative" aria-label="Notifications">
+              <Bell size={20} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            </button>
+            
+            <div className="ml-2 h-8 w-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center overflow-hidden">
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user?.name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-sm font-medium text-indigo-700">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </span>
+              )}
+            </div>
+          </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>

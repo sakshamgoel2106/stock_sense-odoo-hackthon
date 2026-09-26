@@ -1,16 +1,25 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Package } from 'lucide-react';
+import { Eye, EyeOff, Package, BarChart3, Boxes, Warehouse } from "lucide-react";
+import { motion } from "motion/react";
 import { GoogleLogin } from '@react-oauth/google';
 
-const Register = () => {
+const ROLES = [
+  { value: 'WORKER', label: 'Warehouse Staff (Worker)', desc: 'Can perform operations and view stock' },
+  { value: 'MANAGER', label: 'Inventory Manager', desc: 'Full access including reports and approvals' },
+];
+
+export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('WORKER');
+  const [agreed, setAgreed] = useState(false);
+
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
   const { register, googleLogin } = useAuth();
   const navigate = useNavigate();
 
@@ -29,6 +38,7 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!agreed) { setError('Please agree to the Terms of Service to continue.'); return; }
     try {
       setLoading(true);
       setError(null);
@@ -42,101 +52,242 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
-        <div className="text-center">
-          <Package className="mx-auto h-12 w-12 text-indigo-600" />
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Create an account</h2>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-lg">{error}</div>}
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <input
-                name="name"
-                type="text"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+    <div className="min-h-screen flex bg-gray-50">
+      {/* ── Left panel: form ── */}
+      <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:px-16 xl:px-24 bg-white shadow-xl z-10 overflow-y-auto">
+        <div className="mx-auto w-full max-w-sm">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 mb-8">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600">
+              <Package className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <input
-                name="email"
-                type="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <input
-                name="password"
-                type="password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div>
-              <select
-                name="role"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                <option value="WORKER">Warehouse Staff (Worker)</option>
-                <option value="MANAGER">Inventory Manager</option>
-              </select>
-            </div>
+            <span className="text-xl font-bold tracking-tight text-gray-900">StockSense</span>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 transition-colors"
-            >
-              {loading ? 'Signing up...' : 'Sign up'}
-            </button>
+          {/* Heading */}
+          <div className="mb-7">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Create your account</h1>
+            <p className="mt-1.5 text-sm text-gray-500">Join your team and start managing inventory.</p>
           </div>
-        </form>
 
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+          {/* Error */}
+          {error && (
+            <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <span className="mt-0.5 shrink-0">⚠</span>
+              {error}
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
-            </div>
-          </div>
-          <div className="mt-6 flex justify-center">
+          )}
+
+          {/* Google */}
+          <div className="flex justify-center mb-5">
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={() => setError('Google sign up failed')}
+              shape="rectangular"
+              size="large"
+              text="signup_with"
+              width={384}
             />
           </div>
-        </div>
 
-        <div className="text-center mt-4">
-          <p className="text-sm text-gray-600">
+          {/* Divider */}
+          <div className="relative mb-5">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-white px-3 text-xs text-gray-400">or register with email</span>
+            </div>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <InputField label="Full Name" type="text" value={name} onChange={setName} placeholder="Jane Doe" required />
+            <InputField label="Email Address" type="email" value={email} onChange={setEmail} placeholder="jane@company.com" required />
+            <InputField label="Password" type="password" value={password} onChange={setPassword} placeholder="Min. 6 characters" required />
+
+            {/* Role selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Select your role</label>
+              <div className="space-y-2">
+                {ROLES.map((r) => (
+                  <label
+                    key={r.value}
+                    className={`flex items-start gap-3 cursor-pointer rounded-lg border p-3 transition-all ${
+                      role === r.value
+                        ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value={r.value}
+                      checked={role === r.value}
+                      onChange={() => setRole(r.value)}
+                      className="mt-0.5 accent-indigo-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{r.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{r.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Terms checkbox */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <div className="relative mt-0.5 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-gray-300 bg-white checked:border-indigo-600 checked:bg-indigo-600 transition-colors"
+                />
+                <svg
+                  viewBox="0 0 12 12"
+                  className="pointer-events-none absolute inset-0 hidden h-4 w-4 p-0.5 text-white peer-checked:block"
+                  fill="none"
+                >
+                  <path d="M3 6.2 5 8.1 9 3.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <span className="text-xs text-gray-500 leading-5">
+                By signing up, I agree to the{' '}
+                <a href="#" className="text-indigo-600 underline underline-offset-2 hover:text-indigo-500">Terms of Service</a>
+                {' '}and{' '}
+                <a href="#" className="text-indigo-600 underline underline-offset-2 hover:text-indigo-500">Privacy Policy</a>.
+              </span>
+            </label>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex h-10 items-center justify-center rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Creating account…
+                </span>
+              ) : 'Create Account'}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-gray-500">
             Already have an account?{' '}
-            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-500">
               Sign in
             </Link>
           </p>
         </div>
       </div>
+
+      {/* ── Right panel: branding ── */}
+      <div className="hidden lg:flex lg:flex-1 flex-col justify-between bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 px-14 py-16 relative overflow-hidden">
+        {/* Decorative blobs */}
+        <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-violet-700/30 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 -left-16 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur mb-10">
+              <Package className="h-5 w-5 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-white leading-snug">
+              Built for teams that<br />move fast.
+            </h2>
+            <p className="mt-4 text-base text-indigo-200 max-w-md">
+              StockSense gives your whole warehouse team — from staff to managers — the tools they need to operate with confidence.
+            </p>
+          </motion.div>
+
+          <div className="mt-10 space-y-5">
+            {[
+              { icon: Boxes, title: "Role-based Access", desc: "Workers and managers each see exactly what they need." },
+              { icon: Warehouse, title: "Multi-site Operations", desc: "Manage all your warehouse locations from one account." },
+              { icon: BarChart3, title: "Instant Reporting", desc: "Get stock aging, valuation and audit reports on demand." },
+            ].map((f, i) => (
+              <motion.div
+                key={f.title}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.15 + i * 0.12 }}
+                className="flex items-start gap-4"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 backdrop-blur">
+                  <f.icon className="h-5 w-5 text-indigo-200" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">{f.title}</p>
+                  <p className="mt-0.5 text-xs text-indigo-300">{f.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* Testimonial */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="relative z-10 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6"
+        >
+          <p className="text-sm text-indigo-100 leading-relaxed">
+            "Our onboarding took less than an afternoon. The role system means every team member can get started without extra training."
+          </p>
+          <div className="mt-4 flex items-center gap-3">
+            <img
+              src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=80&h=80&fit=crop&q=80"
+              alt="Sarah Jenkins"
+              className="h-9 w-9 rounded-full object-cover border border-white/20"
+            />
+            <div>
+              <p className="text-sm font-semibold text-white">Sarah Jenkins</p>
+              <p className="text-xs text-indigo-300">Warehouse Operations Manager</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
-};
+}
 
-export default Register;
+function InputField({ label, placeholder, type = "text", value, onChange, required }) {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      <div className="relative">
+        <input
+          type={type === "password" ? (showPassword ? "text" : "password") : type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          className="block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        />
+        {type === "password" && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setShowPassword((p) => !p)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
