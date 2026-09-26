@@ -22,6 +22,14 @@ import Adjustments from './pages/Adjustments';
 import AdjustmentForm from './pages/AdjustmentForm';
 import Dashboard from './pages/Dashboard';
 import StockLedger from './pages/StockLedger';
+import StockAging from './pages/StockAging';
+import StockForecasting from './pages/StockForecasting';
+import InventoryValuation from './pages/InventoryValuation';
+import Reservations from './pages/Reservations';
+import TransferApprovals from './pages/TransferApprovals';
+import AuditList from './pages/AuditList';
+import AuditForm from './pages/AuditForm';
+import AuditReview from './pages/AuditReview';
 
 function App() {
   return (
@@ -56,6 +64,17 @@ function App() {
               <Route path="transfers/new" element={<TransferForm />} />
               <Route path="adjustments" element={<Adjustments />} />
               <Route path="adjustments/new" element={<AdjustmentForm />} />
+              
+              {/* Advanced Features */}
+              <Route path="aging" element={<StockAging />} />
+              <Route path="forecasting" element={<StockForecasting />} />
+              <Route path="valuation" element={<InventoryValuation />} />
+              <Route path="reservations" element={<Reservations />} />
+              <Route path="approvals" element={<TransferApprovals />} />
+              <Route path="audits" element={<AuditList />} />
+              <Route path="audits/new" element={<AuditForm />} />
+              <Route path="audits/:id/count" element={<AuditForm />} />
+              <Route path="audits/:id/review" element={<AuditReview />} />
             </Route>
           </Route>
         </Routes>

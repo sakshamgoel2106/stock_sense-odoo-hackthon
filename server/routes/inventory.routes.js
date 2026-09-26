@@ -6,7 +6,12 @@ const {
   getOperationById,
   validateOperationController,
   getStock,
-  getLedger
+  getLedger,
+  getStockAging,
+  getValuation,
+  getForecast,
+  approveOperation,
+  rejectOperation
 } = require('../controllers/inventory.controller');
 
 const { protect } = require('../middleware/auth.middleware');
@@ -23,10 +28,25 @@ router.route('/operations/:id')
 router.route('/operations/:id/validate')
   .post(validateOperationController);
 
+router.route('/operations/:id/approve')
+  .put(approveOperation);
+
+router.route('/operations/:id/reject')
+  .put(rejectOperation);
+
 router.route('/stock')
   .get(getStock);
 
 router.route('/ledger')
   .get(getLedger);
+
+router.route('/aging')
+  .get(getStockAging);
+
+router.route('/valuation')
+  .get(getValuation);
+
+router.route('/forecast')
+  .get(getForecast);
 
 module.exports = router;

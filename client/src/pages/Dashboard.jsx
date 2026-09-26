@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, AlertTriangle, AlertCircle, Clock, TrendingUp } from 'lucide-react';
+import { Package, AlertTriangle, AlertCircle, Clock, TrendingUp, DollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../lib/api';
 
@@ -12,12 +12,13 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [productsRes, stockRes, operationsRes, ledgerRes, warehouseRes] = await Promise.all([
+        const [productsRes, stockRes, operationsRes, ledgerRes, warehouseRes, valuationRes] = await Promise.all([
           api.get('/products'),
           api.get('/inventory/stock'),
           api.get('/inventory/operations'),
           api.get('/inventory/ledger'),
-          api.get('/warehouses')
+          api.get('/warehouses'),
+          api.get('/inventory/valuation')
         ]);
 
         const products = productsRes.data;
@@ -25,8 +26,10 @@ const Dashboard = () => {
         const operations = operationsRes.data;
         const ledger = ledgerRes.data;
         const warehouses = warehouseRes.data;
+        const valuation = valuationRes.data;
 
         // KPI Calculations
+        const totalPortfolioValue = valuation.reduce((acc, curr) => acc + curr.totalValue, 0);
         const totalProducts = products.length;
         
         let totalStockQuantity = 0;
@@ -67,6 +70,7 @@ const Dashboard = () => {
         setStats({
           totalProducts,
           totalStockQuantity,
+          totalPortfolioValue,
           lowStockCount,
           outOfStockCount,
           pendingOperationsCount: pendingOperations.length,
@@ -104,12 +108,19 @@ const Dashboard = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
           <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg"><Package size={24} /></div>
           <div>
             <p className="text-sm font-medium text-gray-500">Total Products</p>
             <p className="text-2xl font-bold text-gray-900">{stats.totalProducts}</p>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><DollarSign size={24} /></div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Inventory Value</p>
+            <p className="text-2xl font-bold text-gray-900">₹{stats.totalPortfolioValue?.toLocaleString('en-IN')}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">

@@ -36,8 +36,8 @@ describe('Inventory Operations API', () => {
 
   beforeEach(async () => {
     product = await Product.create({ name: 'Laptop', sku: 'LAP123', price: 1000 });
-    warehouseA = await Warehouse.create({ name: 'Main Warehouse' });
-    warehouseB = await Warehouse.create({ name: 'Secondary Warehouse' });
+    warehouseA = await Warehouse.create({ name: 'Main Warehouse', code: 'MAIN1' });
+    warehouseB = await Warehouse.create({ name: 'Secondary Warehouse', code: 'SEC1' });
   });
 
   it('1. Receipt increases stock correctly', async () => {

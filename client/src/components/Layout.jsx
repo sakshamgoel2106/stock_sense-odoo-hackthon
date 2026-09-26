@@ -3,7 +3,8 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Package, MapPin, BarChart3, LayoutDashboard, 
   ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft, Sliders, 
-  LogOut, UserCircle, BookOpen, Menu, X
+  LogOut, UserCircle, BookOpen, Menu, X,
+  Clock, TrendingUp, DollarSign, Bookmark, CheckSquare, ClipboardCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,6 +32,15 @@ const Layout = () => {
     { to: "/deliveries", icon: <ArrowUpFromLine size={20} />, label: "Deliveries" },
     { to: "/transfers", icon: <ArrowRightLeft size={20} />, label: "Transfers" },
     { to: "/adjustments", icon: <Sliders size={20} />, label: "Adjustments" },
+  ];
+
+  const advancedLinks = [
+    { to: "/aging", icon: <Clock size={20} />, label: "Stock Aging" },
+    { to: "/forecasting", icon: <TrendingUp size={20} />, label: "Forecasting" },
+    { to: "/valuation", icon: <DollarSign size={20} />, label: "Valuation" },
+    { to: "/reservations", icon: <Bookmark size={20} />, label: "Reservations" },
+    { to: "/approvals", icon: <CheckSquare size={20} />, label: "Transfer Approvals" },
+    { to: "/audits", icon: <ClipboardCheck size={20} />, label: "Smart Audits" },
   ];
 
   const NavItem = ({ to, icon, label }) => {
@@ -82,6 +92,14 @@ const Layout = () => {
           </div>
           
           {operationLinks.map(link => (
+            <NavItem key={link.to} {...link} />
+          ))}
+
+          <div className="pt-6 pb-2">
+            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Advanced</p>
+          </div>
+          
+          {advancedLinks.map(link => (
             <NavItem key={link.to} {...link} />
           ))}
         </nav>

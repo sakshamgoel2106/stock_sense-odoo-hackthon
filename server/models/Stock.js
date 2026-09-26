@@ -8,6 +8,12 @@ const stockSchema = new mongoose.Schema({
     required: true, 
     default: 0,
     min: [0, 'Stock quantity cannot be negative']
+  },
+  reservedQuantity: {
+    type: Number,
+    required: true,
+    default: 0,
+    min: [0, 'Reserved quantity cannot be negative']
   }
 }, { timestamps: true });
 

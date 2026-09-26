@@ -1,7 +1,9 @@
 const asyncHandler = require('express-async-handler');
+const mongoose = require('mongoose');
 const Operation = require('../models/Operation');
 const Stock = require('../models/Stock');
 const StockLedger = require('../models/StockLedger');
+const StockLayer = require('../models/StockLayer');
 const { validateOperation } = require('../services/inventory.service');
 
 // @desc    Create new inventory operation
@@ -20,7 +22,8 @@ const createOperation = asyncHandler(async (req, res) => {
     sourceWarehouse,
     destinationWarehouse,
     items,
-    createdBy: req.user ? req.user._id : null
+    createdBy: req.user ? req.user._id : null,
+    approvalStatus: type === 'TRANSFER' ? 'PENDING' : 'NOT_REQUIRED'
   });
 
   const createdOperation = await operation.save();
@@ -114,11 +117,244 @@ const getLedger = asyncHandler(async (req, res) => {
   res.json(ledger);
 });
 
+// @desc    Get stock aging
+// @route   GET /api/v1/inventory/aging
+// @access  Private
+const getStockAging = asyncHandler(async (req, res) => {
+  const { warehouse, product } = req.query;
+  const match = { remainingQuantity: { $gt: 0 } };
+  
+  if (warehouse) match.warehouse = new mongoose.Types.ObjectId(warehouse);
+  if (product) match.product = new mongoose.Types.ObjectId(product);
+
+  const now = new Date();
+  
+  const agingReport = await StockLayer.aggregate([
+    { $match: match },
+    {
+      $project: {
+        product: 1,
+        warehouse: 1,
+        remainingQuantity: 1,
+        ageInDays: {
+          $divide: [
+            { $subtract: [now, "$receivedAt"] },
+            1000 * 60 * 60 * 24
+          ]
+        }
+      }
+    },
+    {
+      $project: {
+        product: 1,
+        warehouse: 1,
+        remainingQuantity: 1,
+        ageInDays: 1,
+        category: {
+          $switch: {
+            branches: [
+              { case: { $lte: ["$ageInDays", 30] }, then: "0-30 days" },
+              { case: { $lte: ["$ageInDays", 60] }, then: "31-60 days" },
+              { case: { $lte: ["$ageInDays", 90] }, then: "61-90 days" }
+            ],
+            default: "90+ days"
+          }
+        }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          product: "$product",
+          warehouse: "$warehouse",
+          category: "$category"
+        },
+        totalQuantity: { $sum: "$remainingQuantity" }
+      }
+    }
+  ]);
+  
+  const populated = await StockLayer.populate(agingReport, [
+    { path: '_id.product', select: 'name sku', model: 'Product' },
+    { path: '_id.warehouse', select: 'name', model: 'Warehouse' }
+  ]);
+
+  const result = populated.map(item => ({
+    product: item._id.product,
+    warehouse: item._id.warehouse,
+    category: item._id.category,
+    quantity: item.totalQuantity
+  }));
+
+  res.json(result);
+});
+
+// @desc    Get inventory valuation
+// @route   GET /api/v1/inventory/valuation
+// @access  Private
+const getValuation = asyncHandler(async (req, res) => {
+  const { warehouse, product } = req.query;
+  const match = { remainingQuantity: { $gt: 0 } };
+  
+  if (warehouse) match.warehouse = new mongoose.Types.ObjectId(warehouse);
+  if (product) match.product = new mongoose.Types.ObjectId(product);
+
+  const valuationReport = await StockLayer.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: {
+          product: "$product",
+          warehouse: "$warehouse"
+        },
+        totalQuantity: { $sum: "$remainingQuantity" },
+        totalValue: { $sum: { $multiply: ["$remainingQuantity", { $ifNull: ["$unitCost", 0] }] } }
+      }
+    }
+  ]);
+
+  const populated = await StockLayer.populate(valuationReport, [
+    { path: '_id.product', select: 'name sku category', model: 'Product' },
+    { path: '_id.warehouse', select: 'name', model: 'Warehouse' }
+  ]);
+
+  const result = populated.map(item => ({
+    product: item._id.product,
+    warehouse: item._id.warehouse,
+    totalQuantity: item.totalQuantity,
+    totalValue: item.totalValue
+  }));
+
+  res.json(result);
+});
+
+// @desc    Get stock forecasting
+// @route   GET /api/v1/inventory/forecast
+// @access  Private
+const getForecast = asyncHandler(async (req, res) => {
+  const { warehouse, product, window = 30 } = req.query;
+  const match = { operationType: 'DELIVERY' };
+  
+  if (warehouse) match.warehouse = new mongoose.Types.ObjectId(warehouse);
+  if (product) match.product = new mongoose.Types.ObjectId(product);
+
+  const windowDays = parseInt(window);
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - windowDays);
+  match.createdAt = { $gte: cutoffDate };
+
+  const usageStats = await StockLedger.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: { product: "$product", warehouse: "$warehouse" },
+        totalUsage: { $sum: { $abs: "$quantityChange" } }
+      }
+    }
+  ]);
+
+  const stockFilter = {};
+  if (warehouse) stockFilter.warehouse = new mongoose.Types.ObjectId(warehouse);
+  if (product) stockFilter.product = new mongoose.Types.ObjectId(product);
+  
+  const currentStocks = await Stock.find(stockFilter).populate('product', 'name sku').populate('warehouse', 'name');
+
+  const result = currentStocks.map(stock => {
+    const stat = usageStats.find(s => 
+      s._id.product.toString() === stock.product._id.toString() && 
+      s._id.warehouse.toString() === stock.warehouse._id.toString()
+    );
+    
+    const totalUsage = stat ? stat.totalUsage : 0;
+    const averageDailyUsage = totalUsage / windowDays;
+    const availableStock = stock.quantity - (stock.reservedQuantity || 0);
+    
+    let estimatedDaysRemaining = null;
+    let status = "Insufficient data";
+    
+    if (averageDailyUsage > 0) {
+      estimatedDaysRemaining = availableStock / averageDailyUsage;
+      if (estimatedDaysRemaining <= 7) status = "Critical";
+      else if (estimatedDaysRemaining <= 30) status = "Warning";
+      else status = "Healthy";
+    } else if (availableStock === 0) {
+      status = "Stock out";
+      estimatedDaysRemaining = 0;
+    }
+
+    return {
+      product: stock.product,
+      warehouse: stock.warehouse,
+      currentStock: stock.quantity,
+      reservedStock: stock.reservedQuantity || 0,
+      availableStock,
+      totalUsageInWindow: totalUsage,
+      averageDailyUsage,
+      estimatedDaysRemaining,
+      status,
+      windowDays
+    };
+  });
+
+  res.json(result);
+});
+
+// @desc    Approve an operation
+// @route   PUT /api/v1/inventory/operations/:id/approve
+// @access  Private
+const approveOperation = asyncHandler(async (req, res) => {
+  const operation = await Operation.findById(req.params.id);
+  if (!operation) {
+    res.status(404);
+    throw new Error('Operation not found');
+  }
+  if (operation.approvalStatus !== 'PENDING') {
+    res.status(400);
+    throw new Error('Operation is not pending approval');
+  }
+  
+  operation.approvalStatus = 'APPROVED';
+  operation.approvedBy = req.user._id;
+  await operation.save();
+  
+  res.json({ message: 'Operation approved', operation });
+});
+
+// @desc    Reject an operation
+// @route   PUT /api/v1/inventory/operations/:id/reject
+// @access  Private
+const rejectOperation = asyncHandler(async (req, res) => {
+  const { reason } = req.body;
+  const operation = await Operation.findById(req.params.id);
+  
+  if (!operation) {
+    res.status(404);
+    throw new Error('Operation not found');
+  }
+  if (operation.approvalStatus !== 'PENDING') {
+    res.status(400);
+    throw new Error('Operation is not pending approval');
+  }
+  
+  operation.approvalStatus = 'REJECTED';
+  operation.approvedBy = req.user._id;
+  operation.approvalReason = reason;
+  operation.status = 'CANCELLED';
+  await operation.save();
+  
+  res.json({ message: 'Operation rejected', operation });
+});
+
 module.exports = {
   createOperation,
   getOperations,
   getOperationById,
   validateOperationController,
   getStock,
-  getLedger
+  getLedger,
+  getStockAging,
+  getValuation,
+  getForecast,
+  approveOperation,
+  rejectOperation
 };

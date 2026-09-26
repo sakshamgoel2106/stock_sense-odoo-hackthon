@@ -11,6 +11,13 @@ const operationSchema = new mongoose.Schema({
     enum: ['DRAFT', 'VALIDATED', 'CANCELLED'], 
     default: 'DRAFT' 
   },
+  approvalStatus: {
+    type: String,
+    enum: ['NOT_REQUIRED', 'PENDING', 'APPROVED', 'REJECTED'],
+    default: 'NOT_REQUIRED'
+  },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  approvalReason: { type: String },
   sourceWarehouse: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Warehouse',
@@ -27,7 +34,8 @@ const operationSchema = new mongoose.Schema({
   },
   items: [{
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-    quantity: { type: Number, required: true, min: [0, 'Quantity cannot be negative'] }
+    quantity: { type: Number, required: true, min: [0, 'Quantity cannot be negative'] },
+    unitCost: { type: Number, default: 0 } // Used for RECEIPTS to track valuation
   }],
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   validatedAt: { type: Date }

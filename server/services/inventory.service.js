@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Stock = require('../models/Stock');
 const StockLedger = require('../models/StockLedger');
 const Operation = require('../models/Operation');
+const StockLayer = require('../models/StockLayer');
 
 /**
  * Ensures atomicity when processing stock changes.
@@ -69,6 +70,69 @@ const _createLedgerEntry = async (data, session) => {
   await ledger.save({ session });
 };
 
+// --- NEW FIFO LOGIC ---
+const _consumeFIFO = async (product, warehouse, quantityToConsume, session) => {
+  let remaining = quantityToConsume;
+  // Get active layers ordered by oldest first
+  const layers = await StockLayer.find({
+    product,
+    warehouse,
+    remainingQuantity: { $gt: 0 }
+  }).sort({ receivedAt: 1 }).session(session);
+
+  for (const layer of layers) {
+    if (remaining <= 0) break;
+    const available = layer.remainingQuantity;
+    if (available <= remaining) {
+      layer.remainingQuantity = 0;
+      remaining -= available;
+    } else {
+      layer.remainingQuantity -= remaining;
+      remaining = 0;
+    }
+    await layer.save({ session });
+  }
+};
+
+const _transferFIFO = async (product, sourceWarehouse, destWarehouse, quantityToTransfer, operationId, session) => {
+  let remaining = quantityToTransfer;
+  const layers = await StockLayer.find({
+    product,
+    warehouse: sourceWarehouse,
+    remainingQuantity: { $gt: 0 }
+  }).sort({ receivedAt: 1 }).session(session);
+
+  for (const layer of layers) {
+    if (remaining <= 0) break;
+    const available = layer.remainingQuantity;
+    let taken = 0;
+    
+    if (available <= remaining) {
+      taken = available;
+      layer.remainingQuantity = 0;
+      remaining -= available;
+    } else {
+      taken = remaining;
+      layer.remainingQuantity -= remaining;
+      remaining = 0;
+    }
+    await layer.save({ session });
+    
+    if (taken > 0) {
+      const destLayer = new StockLayer({
+        product,
+        warehouse: destWarehouse,
+        operation: operationId,
+        originalQuantity: taken,
+        remainingQuantity: taken,
+        unitCost: layer.unitCost, // transfer existing cost
+        receivedAt: layer.receivedAt // PRESERVE AGING
+      });
+      await destLayer.save({ session });
+    }
+  }
+};
+
 const validateOperation = async (operationId, userId) => {
   return await runWithTransaction(async (session) => {
     const operation = await Operation.findById(operationId).session(session);
@@ -82,12 +146,28 @@ const validateOperation = async (operationId, userId) => {
     if (operation.status === 'CANCELLED') {
       throw new Error("Cannot validate a cancelled operation");
     }
+    if (operation.approvalStatus === 'PENDING') {
+      throw new Error("Operation requires manager approval");
+    }
 
     const { type, items, sourceWarehouse, destinationWarehouse } = operation;
 
     for (const item of items) {
       if (type === 'RECEIPT') {
         const { previousQuantity, newQuantity } = await _updateStock(item.product, destinationWarehouse, item.quantity, session);
+        
+        // Create new StockLayer
+        const newLayer = new StockLayer({
+          product: item.product,
+          warehouse: destinationWarehouse,
+          operation: operation._id,
+          originalQuantity: item.quantity,
+          remainingQuantity: item.quantity,
+          unitCost: item.unitCost || 0,
+          receivedAt: new Date()
+        });
+        await newLayer.save({ session });
+
         await _createLedgerEntry({
           operation: operation._id,
           operationType: type,
@@ -101,6 +181,10 @@ const validateOperation = async (operationId, userId) => {
       } 
       else if (type === 'DELIVERY') {
         const { previousQuantity, newQuantity } = await _updateStock(item.product, sourceWarehouse, -item.quantity, session);
+        
+        // Consume FIFO
+        await _consumeFIFO(item.product, sourceWarehouse, item.quantity, session);
+
         await _createLedgerEntry({
           operation: operation._id,
           operationType: type,
@@ -115,6 +199,13 @@ const validateOperation = async (operationId, userId) => {
       else if (type === 'TRANSFER') {
         // Decrease from source
         const sourceUpdate = await _updateStock(item.product, sourceWarehouse, -item.quantity, session);
+        
+        // Increase in destination
+        const destUpdate = await _updateStock(item.product, destinationWarehouse, item.quantity, session);
+        
+        // Transfer FIFO layers
+        await _transferFIFO(item.product, sourceWarehouse, destinationWarehouse, item.quantity, operation._id, session);
+
         await _createLedgerEntry({
           operation: operation._id,
           operationType: type,
@@ -126,8 +217,6 @@ const validateOperation = async (operationId, userId) => {
           user: userId
         }, session);
         
-        // Increase in destination
-        const destUpdate = await _updateStock(item.product, destinationWarehouse, item.quantity, session);
         await _createLedgerEntry({
           operation: operation._id,
           operationType: type,
@@ -147,6 +236,23 @@ const validateOperation = async (operationId, userId) => {
         
         const { previousQuantity, newQuantity } = await _updateStock(item.product, destinationWarehouse, delta, session);
         
+        if (delta > 0) {
+          // Gain: new layer
+          const newLayer = new StockLayer({
+            product: item.product,
+            warehouse: destinationWarehouse,
+            operation: operation._id,
+            originalQuantity: delta,
+            remainingQuantity: delta,
+            unitCost: item.unitCost || 0,
+            receivedAt: new Date()
+          });
+          await newLayer.save({ session });
+        } else if (delta < 0) {
+          // Loss: consume FIFO
+          await _consumeFIFO(item.product, destinationWarehouse, Math.abs(delta), session);
+        }
+
         if (delta !== 0) {
           await _createLedgerEntry({
             operation: operation._id,
@@ -171,5 +277,8 @@ const validateOperation = async (operationId, userId) => {
 };
 
 module.exports = {
-  validateOperation
+  runWithTransaction,
+  validateOperation,
+  _updateStock, // Exported for use in reservations
+  _consumeFIFO // Exported for use in reservations
 };
